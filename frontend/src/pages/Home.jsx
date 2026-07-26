@@ -1,29 +1,36 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { getPosts } from "../api/blogApi";
+import { getPosts, getErrorMessage } from "../api/blogApi";
 import PostCard from "../components/PostCard";
+
+const CATEGORIES = ["All", "General", "Programming", "Technology", "Travel", "Life"];
 
 export default function Home() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [searchInput, setSearchInput] = useState("");
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("All");
 
   const loadPosts = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
       const params = { page, size: 9 };
       if (query) params.q = query;
+      else if (category && category !== "All") params.category = category;
       const res = await getPosts(params);
-      setPosts(res.data.content);
-      setTotalPages(res.data.totalPages);
+      setPosts(res.data.content || []);
+      setTotalPages(res.data.totalPages || 0);
     } catch (err) {
-      console.error(err);
+      setPosts([]);
+      setError(getErrorMessage(err, "Failed to load posts"));
     } finally {
       setLoading(false);
     }
-  }, [page, query]);
+  }, [page, query, category]);
 
   useEffect(() => {
     loadPosts();
@@ -32,7 +39,15 @@ export default function Home() {
   const handleSearch = (e) => {
     e.preventDefault();
     setPage(0);
+    setCategory("All");
     setQuery(searchInput.trim());
+  };
+
+  const handleCategory = (cat) => {
+    setQuery("");
+    setSearchInput("");
+    setPage(0);
+    setCategory(cat);
   };
 
   return (
@@ -45,21 +60,36 @@ export default function Home() {
       <form className="search-bar" onSubmit={handleSearch}>
         <input
           type="text"
-          placeholder="Search posts by title..."
+          placeholder="Search by title, summary, or category..."
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
         <button className="btn btn-primary" type="submit">Search</button>
       </form>
 
+      <div className="category-filters">
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            className={`chip ${category === cat && !query ? "chip-active" : ""}`}
+            onClick={() => handleCategory(cat)}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {error && <div className="alert alert-error">{error}</div>}
+
       {loading ? (
         <div className="spinner-wrap">Loading posts...</div>
-      ) : posts.length === 0 ? (
+      ) : posts.length === 0 && !error ? (
         <div className="empty-state">
           <h3>No posts found</h3>
           <p>Try a different search or check back later.</p>
         </div>
-      ) : (
+      ) : posts.length > 0 ? (
         <>
           <div className="post-grid">
             {posts.map((post) => (
@@ -89,7 +119,7 @@ export default function Home() {
             </div>
           )}
         </>
-      )}
+      ) : null}
     </div>
   );
 }

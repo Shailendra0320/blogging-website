@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getPostById, updatePost } from "../api/blogApi";
+import { getPostById, updatePost, getErrorMessage } from "../api/blogApi";
 
 export default function EditPost() {
   const { id } = useParams();
@@ -24,7 +24,7 @@ export default function EditPost() {
           published: res.data.published,
         });
       } catch (err) {
-        setError("Post not found or you do not have access.");
+        setError(getErrorMessage(err, "Post not found or you do not have access."));
       } finally {
         setLoading(false);
       }
@@ -45,18 +45,18 @@ export default function EditPost() {
       const res = await updatePost(id, form);
       navigate(`/posts/${res.data.slug}`);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update post");
+      setError(getErrorMessage(err, "Failed to update post"));
     } finally {
       setSubmitting(false);
     }
   };
 
   if (loading) return <div className="spinner-wrap">Loading...</div>;
-  if (error || !form)
+  if (!form)
     return (
       <div className="container page">
         <div className="empty-state">
-          <h3>{error}</h3>
+          <h3>{error || "Post not found"}</h3>
         </div>
       </div>
     );
@@ -65,6 +65,8 @@ export default function EditPost() {
     <div className="container page">
       <div className="form-card wide">
         <h2>Edit post</h2>
+
+        {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">

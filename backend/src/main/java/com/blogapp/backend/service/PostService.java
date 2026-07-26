@@ -56,22 +56,38 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public Page<PostResponse> search(String keyword, Pageable pageable) {
-        return postRepository.findByTitleContainingIgnoreCaseAndPublishedTrueOrderByCreatedAtDesc(keyword, pageable)
+        return postRepository.searchPublished(keyword.trim(), pageable).map(this::toResponse);
+    }
+
+    /**
+     * Public viewers only see published posts.
+     * The author (or an admin) sees drafts as well.
+     */
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getByAuthor(String username, Pageable pageable, String viewerUsername) {
+        User author = userService.getEntityByUsername(username);
+        boolean canSeeDrafts = canViewDrafts(author.getUsername(), viewerUsername);
+
+        if (canSeeDrafts) {
+            return postRepository.findByAuthorOrderByCreatedAtDesc(author, pageable).map(this::toResponse);
+        }
+        return postRepository.findByAuthorAndPublishedTrueOrderByCreatedAtDesc(author, pageable)
                 .map(this::toResponse);
     }
 
-    @Transactional(readOnly = true)
-    public Page<PostResponse> getByAuthor(String username, Pageable pageable) {
-        User author = userService.getEntityByUsername(username);
-        return postRepository.findByAuthorOrderByCreatedAtDesc(author, pageable).map(this::toResponse);
-    }
-
     @Transactional
-    public PostResponse getBySlug(String slug) {
+    public PostResponse getBySlug(String slug, String viewerUsername) {
         Post post = postRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found: " + slug));
-        post.setViews(post.getViews() + 1);
-        postRepository.save(post);
+
+        if (!post.isPublished() && !canViewDrafts(post.getAuthor().getUsername(), viewerUsername)) {
+            throw new ResourceNotFoundException("Post not found: " + slug);
+        }
+
+        if (post.isPublished()) {
+            post.setViews(post.getViews() + 1);
+            postRepository.save(post);
+        }
         return toResponse(post);
     }
 
@@ -102,15 +118,28 @@ public class PostService {
         postRepository.delete(post);
     }
 
+    /** Used by the edit page — only owner or admin may load a post by id. */
     @Transactional(readOnly = true)
-    public PostResponse getById(Long id) {
+    public PostResponse getById(Long id, String username) {
         Post post = getPostOrThrow(id);
+        assertOwnerOrAdmin(post, username);
         return toResponse(post);
     }
 
     private Post getPostOrThrow(Long id) {
         return postRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with id: " + id));
+    }
+
+    private boolean canViewDrafts(String authorUsername, String viewerUsername) {
+        if (viewerUsername == null || viewerUsername.isBlank()) {
+            return false;
+        }
+        if (authorUsername.equals(viewerUsername)) {
+            return true;
+        }
+        User viewer = userService.getEntityByUsername(viewerUsername);
+        return viewer.getRole() == Role.ROLE_ADMIN;
     }
 
     private void assertOwnerOrAdmin(Post post, String username) {
@@ -124,6 +153,9 @@ public class PostService {
 
     private String generateUniqueSlug(String title) {
         String base = toSlug(title);
+        if (base.isBlank()) {
+            base = "post";
+        }
         String slug = base;
         int counter = 1;
         while (postRepository.existsBySlug(slug)) {
@@ -151,7 +183,7 @@ public class PostService {
                 .published(post.isPublished())
                 .views(post.getViews())
                 .commentCount(post.getComments() == null ? 0 : post.getComments().size())
-                .author(userService.toResponse(post.getAuthor()))
+                .author(userService.toPublicResponse(post.getAuthor()))
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();

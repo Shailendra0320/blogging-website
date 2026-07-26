@@ -1,5 +1,8 @@
 import api from "./axiosConfig";
 
+// ---------- HEALTH ----------
+export const checkHealth = () => api.get("/health");
+
 // ---------- AUTH ----------
 export const registerUser = (data) => api.post("/auth/register", data);
 export const loginUser = (data) => api.post("/auth/login", data);
@@ -25,3 +28,16 @@ export const deleteComment = (commentId) =>
 export const getCurrentUser = () => api.get("/users/me");
 export const getUserByUsername = (username) => api.get(`/users/${username}`);
 export const updateProfile = (data) => api.put("/users/me", data);
+
+/** Pull a readable message from Spring Boot error JSON or network failures */
+export const getErrorMessage = (err, fallback = "Something went wrong") => {
+  if (!err.response) {
+    return "Cannot reach the backend. Is it running on http://localhost:8080?";
+  }
+  const data = err.response.data;
+  if (data?.message) return data.message;
+  if (data?.errors) {
+    return Object.values(data.errors).join(" ");
+  }
+  return fallback;
+};

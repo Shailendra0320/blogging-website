@@ -67,7 +67,7 @@ public class CommentService {
                 .id(comment.getId())
                 .content(comment.getContent())
                 .postId(comment.getPost().getId())
-                .author(userService.toResponse(comment.getAuthor()))
+                .author(userService.toPublicResponse(comment.getAuthor()))
                 .createdAt(comment.getCreatedAt())
                 .build();
     }

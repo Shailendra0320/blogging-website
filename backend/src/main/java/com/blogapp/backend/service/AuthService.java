@@ -47,13 +47,7 @@ public class AuthService {
         UserDetails userDetails = userDetailsServiceWrapper.loadUserByUsername(saved.getUsername());
         String token = jwtUtil.generateToken(userDetails);
 
-        return AuthResponse.builder()
-                .token(token)
-                .userId(saved.getId())
-                .username(saved.getUsername())
-                .email(saved.getEmail())
-                .role(saved.getRole().name())
-                .build();
+        return buildAuthResponse(token, saved);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -68,8 +62,13 @@ public class AuthService {
         UserDetails userDetails = userDetailsServiceWrapper.loadUserByUsername(user.getUsername());
         String token = jwtUtil.generateToken(userDetails);
 
+        return buildAuthResponse(token, user);
+    }
+
+    private AuthResponse buildAuthResponse(String token, User user) {
         return AuthResponse.builder()
                 .token(token)
+                .tokenType("Bearer")
                 .userId(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())

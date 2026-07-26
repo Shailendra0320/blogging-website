@@ -9,6 +9,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 15000,
 });
 
 // Attach the JWT token (if present) to every outgoing request
@@ -20,11 +21,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// If the backend ever returns 401 (expired/invalid token), log the user out
+// Clear session on 401, but never interrupt login/register flows
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const status = error.response?.status;
+    const url = error.config?.url || "";
+    const isAuthCall = url.includes("/auth/login") || url.includes("/auth/register");
+
+    if (status === 401 && !isAuthCall) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       if (!window.location.pathname.startsWith("/login")) {

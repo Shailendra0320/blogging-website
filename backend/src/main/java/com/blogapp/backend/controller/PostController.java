@@ -40,26 +40,31 @@ public class PostController {
         return ResponseEntity.ok(postService.getAllPublished(pageable));
     }
 
-    // Public: single post by slug (also increments view count)
+    // Public: single post by slug (drafts only visible to owner/admin)
     @GetMapping("/{slug}")
-    public ResponseEntity<PostResponse> getPostBySlug(@PathVariable String slug) {
-        return ResponseEntity.ok(postService.getBySlug(slug));
+    public ResponseEntity<PostResponse> getPostBySlug(@PathVariable String slug,
+                                                        Authentication authentication) {
+        String viewer = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(postService.getBySlug(slug, viewer));
     }
 
-    // Public: posts by a specific author's username
+    // Posts by author — drafts only included when viewer is the author or an admin
     @GetMapping("/author/{username}")
     public ResponseEntity<Page<PostResponse>> getPostsByAuthor(
             @PathVariable String username,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "9") int size) {
+            @RequestParam(defaultValue = "9") int size,
+            Authentication authentication) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(postService.getByAuthor(username, pageable));
+        String viewer = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(postService.getByAuthor(username, pageable, viewer));
     }
 
-    // Protected: fetch a post by numeric id (used by the edit page; owner/admin enforced on save)
+    // Protected: fetch a post by numeric id (edit form — owner/admin only)
     @GetMapping("/id/{id}")
-    public ResponseEntity<PostResponse> getPostById(@PathVariable Long id) {
-        return ResponseEntity.ok(postService.getById(id));
+    public ResponseEntity<PostResponse> getPostById(@PathVariable Long id,
+                                                      Authentication authentication) {
+        return ResponseEntity.ok(postService.getById(id, authentication.getName()));
     }
 
     // Protected: create a post

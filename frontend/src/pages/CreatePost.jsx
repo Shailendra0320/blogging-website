@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createPost } from "../api/blogApi";
+import { createPost, getErrorMessage } from "../api/blogApi";
 
 export default function CreatePost() {
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ export default function CreatePost() {
       const res = await createPost(form);
       navigate(`/posts/${res.data.slug}`);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create post");
+      setError(getErrorMessage(err, "Failed to create post"));
     } finally {
       setSubmitting(false);
     }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getPostBySlug, deletePost } from "../api/blogApi";
+import { getPostBySlug, deletePost, getErrorMessage } from "../api/blogApi";
 import CommentSection from "../components/CommentSection";
 import { useAuth } from "../context/AuthContext";
 
@@ -27,7 +27,7 @@ export default function PostDetail() {
       const res = await getPostBySlug(slug);
       setPost(res.data);
     } catch (err) {
-      setError("Post not found.");
+      setError(getErrorMessage(err, "Post not found."));
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { getErrorMessage } from "../api/blogApi";
 
 export default function Login() {
   const { login } = useAuth();
@@ -22,7 +23,7 @@ export default function Login() {
       const redirectTo = location.state?.from?.pathname || "/";
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Please try again.");
+      setError(getErrorMessage(err, "Login failed. Please try again."));
     } finally {
       setSubmitting(false);
     }

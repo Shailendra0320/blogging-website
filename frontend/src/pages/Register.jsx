@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { getErrorMessage } from "../api/blogApi";
 
 export default function Register() {
   const { register } = useAuth();
@@ -25,7 +26,7 @@ export default function Register() {
       await register(form);
       navigate("/", { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      setError(getErrorMessage(err, "Registration failed. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -44,7 +45,7 @@ export default function Register() {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Username</label>
-            <input name="username" value={form.username} onChange={handleChange} required />
+            <input name="username" value={form.username} onChange={handleChange} required minLength={3} />
           </div>
           <div className="form-group">
             <label>Full Name</label>
